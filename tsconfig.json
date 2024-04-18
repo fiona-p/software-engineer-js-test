@@ -2,7 +2,8 @@
   "ts-node": {
     "compilerOptions": {
       "module": "CommonJS",
-      "noEmitHelpers": false
+      "noEmitHelpers": false,
+       "types": ["node", "jest", "@testing-library/jest-dom"],
     }
   },
   "compilerOptions": {
