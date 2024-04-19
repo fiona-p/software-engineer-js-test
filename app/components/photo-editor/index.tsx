@@ -1,5 +1,9 @@
 import React, { ChangeEvent } from 'react';
 import { useState, useEffect, useRef } from 'react';
+import { Button } from '../button';
+import { Header } from '../header';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faUpDown, faRightLeft } from '@fortawesome/free-solid-svg-icons';
 
 import {
   generatePrintDirectory,
@@ -34,13 +38,13 @@ export const PhotoEditor = (): JSX.Element => {
   const [inputXMaxMin, setinputXMaxMin] = useState(0);
   const hasOffsetY = offsetY || offsetY === 0;
   const hasSavedOffsetY = savedOffsetY || savedOffsetY === 0;
-  const printSettingsCopy = `Print settings: x: ${savedOffsetX} | y:${savedOffsetY} `;
-
+  const hasImageOnCanvas = !!image;
+  const printSettingsCopy = `saved print settings: x: ${savedOffsetX} | y:${savedOffsetY} `;
+  console.log('hasImageOnCanvas', hasImageOnCanvas);
   useEffect(() => {
     if (canvasRef.current) {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
-      // Need a fixed canvas size image on the page
       const width = CanvasSize.width;
       const height = CanvasSize.height;
       // storedPrintDescripion will be in inches so we need to convert back as Canvas works in pixels
@@ -48,7 +52,6 @@ export const PhotoEditor = (): JSX.Element => {
       const storedPrintDescripionInPixels = convertPrintDirToPixels(
         storedPrintDescripion
       );
-
       // If user has already saved print description -> save these settings to the state
       if (storedPrintDescripion) {
         setSavedOffsetX(storedPrintDescripionInPixels?.canvas.photo?.x);
@@ -93,12 +96,10 @@ export const PhotoEditor = (): JSX.Element => {
 
     // convert some values to inches for print to save
     const printDraftInInches = convertPrintDirToInches(printDraft);
-    // TODO: Writes to JSON file
-    // ISSUE: we cannot write the file in the browser. Needs to happen server side?
-    // setPrintDirectory(printDraft);
     setPrintDirectory(printDraftInInches);
+    // TODO: Writes to JSON file
     // Set to local storage for now
-    // TODO: Need a dynamic name that the user can save
+    // TODO/NTH: Let user name print settings so user does not override and can select from a list of settings
     localStorage.setItem('print settings', JSON.stringify(printDraftInInches));
     setSavedOffsetX(offsetX);
     setSavedOffsetY(offsetY);
@@ -135,7 +136,7 @@ export const PhotoEditor = (): JSX.Element => {
     if (!e?.target?.files?.length) {
       return;
     }
-    // const files = e.target.files as FileList;
+
     const file = e.target.files?.[0];
     const reader = new FileReader();
     reader.onload = (e: ProgressEvent<FileReader>) => {
@@ -151,10 +152,7 @@ export const PhotoEditor = (): JSX.Element => {
           img.naturalHeight
         );
 
-        // this wil stop the user moving the image out of the canvas
-        // but it will cause issues if the use imports settings for a much different sized image
-        // so I need to decide if I want this funcitonality
-        // we could update this with the imported settings? TODO? But is this the best UX?
+        // Set min/max to stop the user moving the image out of the canvas
         setinputYMaxMin(getInitialOffsetValueFromImage.y);
         setinputXMaxMin(getInitialOffsetValueFromImage.x);
 
@@ -168,34 +166,13 @@ export const PhotoEditor = (): JSX.Element => {
 
   return (
     <>
-      <header className='heading'>
-        <h1>Photo Editor</h1>
-        <div className='inputContainer'>
-          <label htmlFor='fileSelector'>Upload Image</label>
-          <input
-            type='file'
-            id='fileSelector'
-            onChange={handlePhotoUpload}
-            className='fileInput'
-            accept='.jpg, .jpeg, .png, .gif'
-          />
-        </div>
-        {image && (
-          <div className='subHeading'>
-            {hasSavedOffsetY && (
-              <>
-                <button
-                  className='buttonCommon'
-                  onClick={onHandleImportPrintDescription}
-                >
-                  Import print settings
-                </button>
-                <p className='settingsCopy'>{printSettingsCopy}</p>
-              </>
-            )}
-          </div>
-        )}
-      </header>
+      <Header
+        handlePhotoUpload={handlePhotoUpload}
+        hasImage={hasImageOnCanvas}
+        hasSavedOffsetY={hasSavedOffsetY}
+        onHandleImportPrintDescription={onHandleImportPrintDescription}
+        printSettingsCopy={printSettingsCopy}
+      />
       <canvas
         ref={canvasRef}
         id='myCanvas'
@@ -205,52 +182,49 @@ export const PhotoEditor = (): JSX.Element => {
       >
         Your browser doesn't support canvas
       </canvas>
-
+      {/* TODO/NTH: pull this out into separate compoennt */}
       {hasOffsetY && image && (
         <div className='settingsSection'>
           <div className='inputContainer'>
-            {/* TODO/NTH: Have icon here instead of text */}
-            <label htmlFor='quantity' className='inputHorizontalLabel'>
-              up/down
+            <span className='inputLabelHeading'>Position Image</span>
+            <input
+              type='number'
+              min='-20' // this should be 0 but I like showing the user the blank space?
+              max={inputXMaxMin * 2 + 20}
+              value={offsetX ?? ''}
+              step='10'
+              disabled={!image}
+              onChange={onXoffsetChange}
+              className='offsetInput'
+            />
+            <label htmlFor='offset' className='inputLabel'>
+              <FontAwesomeIcon icon={faRightLeft} />
             </label>
             <input
               type='number'
-              min='-20' // this should always be 0 or maybe -10
+              min='-20' // this should be 0 but I like showing the user the blank space?
               max={inputYMaxMin * 2 + 20}
               value={offsetY ?? ''}
               step='10'
               disabled={!image}
               onChange={onYoffsetChange}
-              className='offsetYInput'
+              className='offsetInput spacing'
             />
-            <label htmlFor='quantity' className='inputHorizontalLabel spacing'>
-              left/rgt
+            <label htmlFor='offset' className='inputLabel'>
+              <FontAwesomeIcon icon={faUpDown} className='iconPosition' />
             </label>
-            <input
-              type='number'
-              min='-20' //
-              max={inputXMaxMin * 2 + 20} // Refine?
-              value={offsetX ?? ''}
-              step='10'
-              disabled={!image}
-              onChange={onXoffsetChange}
-              className='offsetYInput'
-            />
           </div>
-          {/* TODO/NTH: move buttons and small section into re-usable component */}
           <div>
-            <button
-              className='buttonCommon'
-              onClick={onHandleGeneratePrintDescription}
-            >
+            <Button buttonType={0} onClick={onHandleGeneratePrintDescription}>
               Save print settings
-            </button>
-            <button
-              className='buttonCommon buttonClear'
+            </Button>
+            <Button
+              buttonType={1}
               onClick={onHandelClearStorage}
+              customClass='buttonLeftMargin'
             >
               Clear print settings
-            </button>
+            </Button>
           </div>
         </div>
       )}
