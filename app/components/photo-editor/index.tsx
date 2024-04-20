@@ -1,9 +1,7 @@
 import React, { ChangeEvent } from 'react';
 import { useState, useEffect, useRef } from 'react';
-import { Button } from '../button';
 import { Header } from '../header';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUpDown, faRightLeft } from '@fortawesome/free-solid-svg-icons';
+import { Settings } from '../settings';
 
 import {
   generatePrintDirectory,
@@ -34,13 +32,13 @@ export const PhotoEditor = (): JSX.Element => {
   const [printDirections, setPrintDirectory] = useState<PrintDirectory | null>(
     null
   );
-  const [inputYMaxMin, setinputYMaxMin] = useState(0);
-  const [inputXMaxMin, setinputXMaxMin] = useState(0);
+  const [inputYMax, setinputYMax] = useState(0);
+  const [inputXMax, setinputXMax] = useState(0);
   const hasOffsetY = offsetY || offsetY === 0;
   const hasSavedOffsetY = savedOffsetY || savedOffsetY === 0;
   const hasImageOnCanvas = !!image;
   const printSettingsCopy = `saved print settings: x: ${savedOffsetX} | y:${savedOffsetY} `;
-  console.log('hasImageOnCanvas', hasImageOnCanvas);
+
   useEffect(() => {
     if (canvasRef.current) {
       const canvas = canvasRef.current;
@@ -94,7 +92,7 @@ export const PhotoEditor = (): JSX.Element => {
       offsetY
     );
 
-    // convert some values to inches for print to save
+    // convert some values to inches for saved print description
     const printDraftInInches = convertPrintDirToInches(printDraft);
     setPrintDirectory(printDraftInInches);
     // TODO: Writes to JSON file
@@ -111,7 +109,7 @@ export const PhotoEditor = (): JSX.Element => {
     setOffsetX(savedOffsetX);
   };
 
-  const onHandelClearStorage = () => {
+  const onHandleClearStorage = () => {
     localStorage.clear();
     setSavedOffsetX(undefined);
     setSavedOffsetY(undefined);
@@ -121,7 +119,6 @@ export const PhotoEditor = (): JSX.Element => {
     const value = !Number.isNaN(e.target.valueAsNumber)
       ? e.target.valueAsNumber
       : undefined;
-    console.log('Y UPDATED', value);
     setOffsetY(value);
   };
 
@@ -144,7 +141,8 @@ export const PhotoEditor = (): JSX.Element => {
       img.src = reader.result as string;
       img.onload = () => {
         setImage(img);
-        // Work out initial offsets (position) for uploaded image
+        // Work out initial offsets (position) for uploaded image on canvas
+        // Image needs to fit canvas horizontally and be centered on Y axis
         const getInitialOffsetValueFromImage = getImageCoordinates(
           CanvasSize.width,
           CanvasSize.height,
@@ -152,11 +150,11 @@ export const PhotoEditor = (): JSX.Element => {
           img.naturalHeight
         );
 
-        // Set min/max to stop the user moving the image out of the canvas
-        setinputYMaxMin(getInitialOffsetValueFromImage.y);
-        setinputXMaxMin(getInitialOffsetValueFromImage.x);
+        // Set min/max on input to stop the user moving the image out of the canvas
+        setinputYMax(getInitialOffsetValueFromImage.y);
+        setinputXMax(getInitialOffsetValueFromImage.x);
 
-        // Set the initial offset values to position the image correctly on page
+        // Set the initial offset values to position the image correctly on canvas
         setOffsetY(getInitialOffsetValueFromImage.y);
         setOffsetX(getInitialOffsetValueFromImage.x);
       };
@@ -182,51 +180,18 @@ export const PhotoEditor = (): JSX.Element => {
       >
         Your browser doesn't support canvas
       </canvas>
-      {/* TODO/NTH: pull this out into separate compoennt */}
-      {hasOffsetY && image && (
-        <div className='settingsSection'>
-          <div className='inputContainer'>
-            <span className='inputLabelHeading'>Position Image</span>
-            <input
-              type='number'
-              min='-20' // this should be 0 but I like showing the user the blank space?
-              max={inputXMaxMin * 2 + 20}
-              value={offsetX ?? ''}
-              step='10'
-              disabled={!image}
-              onChange={onXoffsetChange}
-              className='offsetInput'
-            />
-            <label htmlFor='offset' className='inputLabel'>
-              <FontAwesomeIcon icon={faRightLeft} />
-            </label>
-            <input
-              type='number'
-              min='-20' // this should be 0 but I like showing the user the blank space?
-              max={inputYMaxMin * 2 + 20}
-              value={offsetY ?? ''}
-              step='10'
-              disabled={!image}
-              onChange={onYoffsetChange}
-              className='offsetInput spacing'
-            />
-            <label htmlFor='offset' className='inputLabel'>
-              <FontAwesomeIcon icon={faUpDown} className='iconPosition' />
-            </label>
-          </div>
-          <div>
-            <Button buttonType={0} onClick={onHandleGeneratePrintDescription}>
-              Save print settings
-            </Button>
-            <Button
-              buttonType={1}
-              onClick={onHandelClearStorage}
-              customClass='buttonLeftMargin'
-            >
-              Clear print settings
-            </Button>
-          </div>
-        </div>
+      {hasOffsetY && hasImageOnCanvas && (
+        <Settings
+          hasImage={hasImageOnCanvas}
+          inputXMax={inputXMax}
+          inputYMax={inputYMax}
+          offsetX={offsetX}
+          offsetY={offsetY}
+          onHandleGeneratePrintDescription={onHandleGeneratePrintDescription}
+          onHandleClearStorage={onHandleClearStorage}
+          onXoffsetChange={onXoffsetChange}
+          onYoffsetChange={onYoffsetChange}
+        />
       )}
     </>
   );
